@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>구원에 관한 성경 구절 타자 연습</title>
+    <style>
+        body {
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0e6d2;
+            color: #3c3c3c;
+        }
+        .container {
+            text-align: center;
+            background-color: #fff9e6;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 90%;
+            border: 2px solid #d4b483;
+        }
+        h1 {
+            color: #8b4513;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        #verse-ko, #verse-en {
+            font-size: 20px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f1e0;
+            border-radius: 10px;
+            border: 1px solid #e6d2b5;
+        }
+        #reference {
+            font-size: 18px;
+            font-style: italic;
+            margin-bottom: 20px;
+            color: #6b4226;
+        }
+        #userInput {
+            width: 90%;
+            height: 100px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            padding: 10px;
+            border: 2px solid #d4b483;
+            border-radius: 10px;
+            background-color: #fffbf0;
+            color: #3c3c3c;
+        }
+        #startButton, .language-toggle button {
+            background-color: #8b4513;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #startButton:hover, .language-toggle button:hover {
+            background-color: #6b4226;
+        }
+        #result, #realTimeStats {
+            margin-top: 20px;
+            background-color: #f8f1e0;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #e6d2b5;
+        }
+        #message {
+            color: #6b4226;
+            font-size: 14px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .language-toggle {
+            margin-bottom: 15px;
+        }
+        .language-toggle button {
+            margin: 0 5px;
+        }
+        .language-toggle button:disabled {
+            background-color: #d4b483;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>구원에 관한 성경 구절 타자 연습</h1>
+        <div class="language-toggle">
+            <button id="toggleKo">한글</button>
+            <button id="toggleEn">English</button>
+        </div>
+        <div id="verse-ko"></div>
+        <div id="verse-en"></div>
+        <div id="reference"></div>
+        <textarea id="userInput" placeholder="위의 구절을 입력하세요." disabled></textarea>
+        <button id="startButton">시작</button>
+        <div id="message">완료 후 엔터 키를 누르세요.</div>
+        <div id="realTimeStats"></div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const verses = [
+                {
+                    ko: "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라",
+                    en: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+                    ref: "요한복음 3:16"
+                },
+                {
+                    ko: "우리가 아직 죄인 되었을 때에 그리스도께서 우리를 위하여 죽으심으로 하나님께서 우리에 대한 자기의 사랑을 확증하셨느니라",
+                    en: "But God demonstrates his own love for us in this: While we were still sinners, Christ died for us.",
+                    ref: "로마서 5:8"
+                },
+                {
+                    ko: "그러므로 이제 그리스도 예수 안에 있는 자에게는 결코 정죄함이 없나니",
+                    en: "Therefore, there is now no condemnation for those who are in Christ Jesus,",
+                    ref: "로마서 8:1"
+                },
+                {
+                    ko: "그가 우리를 흑암의 권세에서 건져내사 그의 사랑의 아들의 나라로 옮기셨으니",
+                    en: "For he has rescued us from the dominion of darkness and brought us into the kingdom of the Son he loves,",
+                    ref: "골로새서 1:13"
+                },
+                {
+                    ko: "너희가 그 은혜를 인하여 믿음으로 말미암아 구원을 받았으니 이것이 너희에게서 난 것이 아니요 하나님의 선물이라",
+                    en: "For it is by grace you have been saved, through faith—and this is not from yourselves, it is the gift of God—",
+                    ref: "에베소서 2:8"
+                }
+            ];
+
+            let state = {
+                currentVerse: null,
+                currentLanguage: 'ko',
+                isTypingStarted: false,
+                startTime: null,
+                timerInterval: null
+            };
+
+            const elements = {
+                verseKo: document.getElementById('verse-ko'),
+                verseEn: document.getElementById('verse-en'),
+                reference: document.getElementById('reference'),
+                userInput: document.getElementById('userInput'),
+                startButton: document.getElementById('startButton'),
+                result: document.getElementById('result'),
+                realTimeStats: document.getElementById('realTimeStats'),
+                message: document.getElementById('message'),
+                toggleKo: document.getElementById('toggleKo'),
+                toggleEn: document.getElementById('toggleEn')
+            };
+
+            function getRandomVerse() {
+                return verses[Math.floor(Math.random() * verses.length)];
+            }
+
+            function calculateAccuracy(original, typed) {
+                let correct = 0;
+                for (let i = 0; i < Math.min(original.length, typed.length); i++) {
+                    if (original[i] === typed[i]) correct++;
+                }
+                return (correct / original.length) * 100;
+            }
+
+            function calculateWPM(typed, elapsedTime) {
+                const words = typed.length / 5;
+                const minutes = elapsedTime / 60000;
+                return words / minutes;
+            }
+
+            function updateRealTimeStats() {
+                if (!state.isTypingStarted) return;
+
+                const currentTime = new Date();
+                const elapsedTime = currentTime - state.startTime;
+                const currentText = elements.userInput.value;
+                const wpm = calculateWPM(currentText, elapsedTime);
+                const accuracy = calculateAccuracy(state.currentVerse[state.currentLanguage], currentText);
+                
+                elements.realTimeStats.innerHTML = `
+                    <p>현재 타자 속도: ${wpm.toFixed(2)} WPM</p>
+                    <p>현재 정확도: ${accuracy.toFixed(2)}%</p>
+                    <p>경과 시간: ${(elapsedTime / 1000).toFixed(2)}초</p>
+                `;
+            }
+
+            function finishTyping() {
+                if (!state.isTypingStarted) return;
+                
+                clearInterval(state.timerInterval);
+                const endTime = new Date();
+                const elapsedTime = endTime - state.startTime;
+                const accuracy = calculateAccuracy(state.currentVerse[state.currentLanguage], elements.userInput.value);
+                const wpm = calculateWPM(elements.userInput.value, elapsedTime);
+
+                elements.result.innerHTML = `
+                    <h3>최종 결과:</h3>
+                    <p>정확도: ${accuracy.toFixed(2)}%</p>
+                    <p>최종 타자 속도: ${wpm.toFixed(2)} WPM</p>
+                    <p>총 소요 시간: ${(elapsedTime / 1000).toFixed(2)}초</p>
+                `;
+
+                elements.startButton.textContent = '다시 시작';
+                elements.userInput.disabled = true;
+                elements.message.textContent = "다시 시작 버튼을 클릭하여 새로운 구절을 연습하세요.";
+                state.isTypingStarted = false;
+            }
+
+            function setLanguage(lang) {
+                state.currentLanguage = lang;
+                if (lang === 'ko') {
+                    elements.verseKo.style.display = 'block';
+                    elements.verseEn.style.display = 'none';
+                    elements.toggleKo.disabled = true;
+                    elements.toggleEn.disabled = false;
+                } else {
+                    elements.verseKo.style.display = 'none';
+                    elements.verseEn.style.display = 'block';
+                    elements.toggleKo.disabled = false;
+                    elements.toggleEn.disabled = true;
+                }
+                updateVerseDisplay();
+                resetTypingSession();
+            }
+
+            function updateVerseDisplay() {
+                if (state.currentVerse) {
+                    elements.verseKo.textContent = state.currentVerse.ko;
+                    elements.verseEn.textContent = state.currentVerse.en;
+                    elements.reference.textContent = state.currentVerse.ref;
+                }
+            }
+
+            function resetTypingSession() {
+                elements.userInput.value = '';
+                elements.userInput.disabled = false;
+                elements.userInput.focus();
+                elements.result.textContent = '';
+                elements.realTimeStats.textContent = '';
+                elements.message.textContent = "완료 후 엔터 키를 누르세요.";
+                clearInterval(state.timerInterval);
+                state.startTime = new Date();
+                state.timerInterval = setInterval(updateRealTimeStats, 1000);
+                state.isTypingStarted = true;
+            }
+
+            function startNewVerse() {
+                state.currentVerse = getRandomVerse();
+                updateVerseDisplay();
+                resetTypingSession();
+                elements.startButton.textContent = '다시 시작';
+            }
+
+            elements.startButton.addEventListener('click', startNewVerse);
+
+            elements.userInput.addEventListener('input', updateRealTimeStats);
+
+            elements.userInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    finishTyping();
+                }
+            });
+
+            elements.toggleKo.addEventListener('click', () => setLanguage('ko'));
+            elements.toggleEn.addEventListener('click', () => setLanguage('en'));
+
+            // 초기 설정
+            state.currentVerse = getRandomVerse();
+            setLanguage('ko');
+        });
+    </script>
+</body>
+</html>
